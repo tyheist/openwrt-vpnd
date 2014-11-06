@@ -96,7 +96,7 @@ config_init_package(struct vpn_uci_package *u)
         u->uci_package = p;
 
     if (!u->uci_package) {
-        LOG(L_NOTICE, "Failed to load uci %s config", u->name);
+        LOG(L_NOTICE, "Failed to load uci '%s' config", u->name);
         return;
     }
 

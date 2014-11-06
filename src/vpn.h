@@ -37,6 +37,7 @@ struct vpn_ubus_obj {
     struct list_head list;
     const char *name;
     struct ubus_object *ubus;
+    bool init;
 };
 
 struct vpn_ops {

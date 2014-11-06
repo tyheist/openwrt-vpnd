@@ -23,8 +23,11 @@
 #include <libubox/blobmsg.h>
 #include <libubox/vlist.h>
 #include <libubox/utils.h>
+#include <libubox/uloop.h>
+#include <uci.h>
 
 extern const char *config_path;
+extern const char *ipsec_path;
 
 #define __init __attribute__((constructor))
 

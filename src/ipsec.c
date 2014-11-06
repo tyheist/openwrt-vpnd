@@ -261,7 +261,7 @@ static int
 ipsec_policy_config(struct vpn *vpn)
 {
     struct ipsec_policy_seting *seting = (struct ipsec_policy_seting *)vpn->seting;
-    char *path = alloca(strlen("/etc/ipsec/") + strlen(vpn->name) + 1);
+    char *path = alloca(strlen(ipsec_path) + strlen(vpn->name) + 1);
     FILE *f;
     if (!vpn->config_pending) {
         LOG(L_NOTICE, "ipsec policy '%s' config not pending", vpn->name);
@@ -396,7 +396,7 @@ static struct vpn_uci_package ipsec_uci = {
     .n_sections = ARRAY_SIZE(ipsec_policy_uci_sections),
 };
 
-/** ubus */
+/** ipsec policy ubus object */
 static int
 ipsec_policy_ubus_up(struct ubus_context *ctx, struct ubus_object *obj,
         struct ubus_request_data *req, const char *method,
@@ -463,12 +463,54 @@ static struct ubus_object_type ipsec_policy_obj_type =
 static struct ubus_object ipsec_policy_obj = {
     .name = "ipsec.policy",
     .type = &ipsec_policy_obj_type,
+    .methods = ipsec_policy_obj_methods,
     .n_methods = ARRAY_SIZE(ipsec_policy_obj_methods),
 };
 
 static struct vpn_ubus_obj ipsec_ubus_policy_obj = {
     .name = "ipsec.policy",
     .ubus = &ipsec_policy_obj,
+    .init = false,
+};
+
+/** ipsec main ubus object */
+static int
+ipsec_main_ubus_restart(struct ubus_context *ctx, struct ubus_object *obj,
+        struct ubus_request_data *req, const char *mehtod,
+        struct blob_attr *msg)
+{
+    LOG(L_DEBUG, "ipsec restart!!!!");
+    return 0;
+}
+
+static int
+ipsec_main_ubus_reload(struct ubus_context *ctx, struct ubus_object *obj,
+        struct ubus_request_data *req, const char *mehtod,
+        struct blob_attr *msg)
+{
+    LOG(L_DEBUG, "ipsec reload!!!!");
+    return 0;
+}
+
+static struct ubus_method ipsec_main_obj_methods[] = {
+    { .name = "restart", .handler = ipsec_main_ubus_restart },
+    { .name = "reload", .handler = ipsec_main_ubus_reload },
+};
+
+static struct ubus_object_type ipsec_main_obj_type = 
+    UBUS_OBJECT_TYPE("ipsec_main", ipsec_main_obj_methods);
+
+static struct ubus_object ipsec_main_obj = {
+    .name = "ipsec",
+    .type = &ipsec_main_obj_type,
+    .methods = ipsec_main_obj_methods,
+    .n_methods = ARRAY_SIZE(ipsec_main_obj_methods),
+};
+
+static struct vpn_ubus_obj ipsec_ubus_main_obj = {
+    .name = "ipsec",
+    .ubus = &ipsec_main_obj,
+    .init = true,
 };
 
 /** init */
@@ -478,5 +520,6 @@ ipsec_type_init(void)
     vpn_uci_package_register(&ipsec_uci);
     vpn_type_register(&ipsec_policy_type);
     vpn_ubus_obj_register(&ipsec_ubus_policy_obj);
+    vpn_ubus_obj_register(&ipsec_ubus_main_obj);
 }
 

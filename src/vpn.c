@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include "utils.h"
 #include "vpn.h"
+#include "ubus.h"
 
 
 static struct list_head h_vpn_type = LIST_HEAD_INIT(h_vpn_type);
@@ -139,18 +140,14 @@ vpn_update(struct vlist_tree *tree, struct vlist_node *node_new, struct vlist_no
     struct vpn *vpn_old = container_of(node_old, struct vpn, node);
     struct vpn *vpn_new = container_of(node_new, struct vpn, node);
 
-    vpn_old->type->update(vpn_new, vpn_old);
-
-    /*
-     *if (node_old && node_new) {
-     *    vpn_old->type->update(vpn_new, vpn_old);
-     *} else if (node_old) {
-     *    vpn_old->type->update(NULL, node_old);
-     *} else if (node_new) {
-     *    vpn_new->type->update(node_new, NULL);
-     *    vpn_ubus_add_object(vpn_new);
-     *}
-     */
+    if (node_old && node_new) {
+        vpn_old->type->update(vpn_new, vpn_old);
+    } else if (node_old) {
+        vpn_old->type->update(NULL, vpn_old);
+    } else if (node_new) {
+        vpn_new->type->update(vpn_new, NULL);
+        vpn_ubus_add_dynamic_object(vpn_new);
+    }
 }
 
 static void __init

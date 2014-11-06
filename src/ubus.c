@@ -26,15 +26,29 @@ static const char *ubus_path;
  * ----------------------------------------
  */
 void
-vpn_ubus_add_object(struct vpn *vpn)
+vpn_ubus_add_dynamic_object(struct vpn *vpn)
 {
     struct ubus_object *obj = &vpn->obj;
+    int ret = 0;
     char *name = NULL;
 
-    if (ubus_add_object(ubus_ctx, &vpn->obj)) {
-        LOG(L_WARNING, "failed to publish ubus object '%s'", vpn->obj.name);
+    ret = ubus_add_object(ubus_ctx, &vpn->obj);
+    if (ret != 0) {
+        LOG(L_WARNING, "failed to publish dynamic ubus object '%s': %s", 
+                vpn->obj.name, ubus_strerror(ret));
         name = (char*)obj->name;
         if (name) { free(name); obj->name = NULL; }
+    }
+}
+
+void
+vpn_ubus_add_static_object(struct ubus_object *obj)
+{
+    int ret = ubus_add_object(ubus_ctx, obj);
+    if (ret != 0) {
+        LOG(L_WARNING, "failed to publish static ubus object '%s': %s", 
+                obj->name, ubus_strerror(ret));
+        return;
     }
 }
 
@@ -112,6 +126,14 @@ vpnd_ubus_init(const char *path)
     ubus_ctx->connection_lost = vpnd_ubus_connection_lost;
     vpnd_ubus_add_fd();
 
+    struct vpn_ubus_obj *obj;
+    list_for_each_entry(obj, &h_ubus_obj, list) {
+        if (obj->init) {
+            vpn_ubus_add_static_object(obj->ubus);
+        }
+    }
+
+    LOG(L_DEBUG, "vpnd init ubus OK");
     return 0;
 }
 
@@ -120,5 +142,4 @@ vpnd_ubus_done(void)
 {
     ubus_free(ubus_ctx);
 }
-
 
