@@ -38,6 +38,7 @@ struct vpn_ubus_obj {
     const char *name;
     struct ubus_object *ubus;
     bool init;
+    bool dyna;
 };
 
 struct vpn_ops {

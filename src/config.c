@@ -42,7 +42,7 @@ config_init_section(const char *name, enum vpn_kind kind, const char *vpn_type, 
     obj = vpn_ubus_obj_lookup(path);
     if (!obj) {
         LOG(L_WARNING, "vpn ubus object %s not exist!", path);
-        goto error;
+        /*goto error;*/
     }
 
     blob_buf_init(&b, 0);

@@ -47,11 +47,13 @@ vpn_alloc(const char *name, enum vpn_kind kind, const struct vpn_type *type,
     vpn->config_pending = true;
 
     /** ubus object init */
-    asprintf(&vpn_obj, "%s.%s", obj->name, name);
-    vpn->obj.name = vpn_obj;
-    vpn->obj.type = obj->ubus->type;
-    vpn->obj.methods = obj->ubus->methods;
-    vpn->obj.n_methods = obj->ubus->n_methods;
+    if (obj) {
+        asprintf(&vpn_obj, "%s.%s", obj->name, name);
+        vpn->obj.name = vpn_obj;
+        vpn->obj.type = obj->ubus->type;
+        vpn->obj.methods = obj->ubus->methods;
+        vpn->obj.n_methods = obj->ubus->n_methods;
+    }
 
     /** create assign vpn type */
     if (vpn->type->create) {

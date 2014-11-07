@@ -69,7 +69,7 @@ vpn_ubus_obj_lookup(const char *path)
 {
     struct vpn_ubus_obj *obj;
     list_for_each_entry(obj, &h_ubus_obj, list) {
-        if (!strcmp(obj->name, path))
+        if (!strcmp(obj->name, path) && obj->dyna)
             return obj;
     }
     return NULL;
