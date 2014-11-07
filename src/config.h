@@ -15,10 +15,13 @@
 #define __VPND_CONFIG_H__
 
 
+struct vpn_uci_package;
+
 struct vpn_uci_section {
     const char *name;
     struct uci_context *uci_ctx;
     struct uci_section *uci_section;
+    struct vpn_uci_package *package;
     void (*init)(struct vpn_uci_section *);
 };
 

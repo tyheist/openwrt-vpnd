@@ -19,34 +19,45 @@
 static struct blob_buf b;
 
 struct ipsec_policy_seting {
-    struct blob_attr *left,
-                     *right,
-                     *leftsubnet,
-                     *rightsubnet,
-                     *leftsubnets,
-                     *rightsubnets,
-                     *type,
-                     *authby,
-                     *ike,
-                     *esp,
-                     *leftid,
-                     *rightid,
+    struct blob_attr *_left,
+                     *_right,
+                     *_leftsubnet,
+                     *_rightsubnet,
+                     *_leftsubnets,
+                     *_rightsubnets,
+                     *_type,
+                     *_authby,
+                     *_ike,
+                     *_esp,
+                     *_leftid,
+                     *_rightid,
                      *_auto,
-                     *aggrmode,
-                     *ikelifetime,
-                     *keylife;
+                     *_aggrmode,
+                     *_ikelifetime,
+                     *_keylife;
 };
 
 enum ipsec_tunnel_stat {
     IPSEC_TUNNEL_UP,
     IPSEC_TUNNEL_DOWN,
+    IPSEC_TUNNEL_P1_INIT,
+    IPSEC_TUNNEL_P1_ENCRYPT,
+    IPSEC_TUNNEL_P1_AUTH,
+    IPSEC_TUNNEL_P1_UP,
+    IPSEC_TUNNEL_P1_DOWN,
+    IPSEC_TUNNEL_P2_NEG,
+    IPSEC_TUNNEL_P2_UP,
+    __IPSEC_TUNNEL_MAX
 };
 
 struct ipsec_tunnel_status {
     struct vlist_node node;
-    struct blob_buf right;
-    enum ipsec_tunnel_stat status;
+
+    char *right;
+    char *status;
+    /*enum ipsec_tunnel_stat status;*/
 };
+
 struct ipsec_policy_status {
     struct vlist_tree status;
     bool up;
@@ -93,6 +104,17 @@ static const struct blobmsg_policy ipsec_policy_attrs[__IPSEC_POLICY_ATTR_MAX] =
     [IPSEC_POLICY_ATTR_KEYLIFE] = { .name = "keylife", .type = BLOBMSG_TYPE_STRING },
 };
 
+enum {
+    IPSEC_STATUS_ATTR_RIGHT,
+    IPSEC_STATUS_ATTR_STAT,
+    __IPSEC_STATUS_ATTR_MAX
+};
+
+static const struct blobmsg_policy ipsec_status_attrs[__IPSEC_STATUS_ATTR_MAX] = {
+    [IPSEC_STATUS_ATTR_RIGHT] = { .name = "right", .type = BLOBMSG_TYPE_STRING },
+    [IPSEC_STATUS_ATTR_STAT] = { .name = "stat", .type = BLOBMSG_TYPE_STRING },
+};
+
 /*
  *static const struct uci_blob_param_info ipsec_policy_attr_info[__IPSEC_POLICY_ATTR_MAX] = {
  *    [IPSEC_POLICY_ATTR_NAME] = { .type = BLOBMSG_TYPE_STRING },
@@ -108,7 +130,7 @@ ipsec_policy_config_set(struct ipsec_policy_seting *seting, struct blob_attr *co
             blob_data(config), blob_len(config));
 
 #define FIELD_SET(field, attr) \
-    if (tb[attr]) { seting->field = tb[attr]; }
+    if (tb[attr]) { seting->_##field = tb[attr]; }
 
     FIELD_SET(left, IPSEC_POLICY_ATTR_LEFT);
     FIELD_SET(right, IPSEC_POLICY_ATTR_RIGHT);
@@ -122,7 +144,7 @@ ipsec_policy_config_set(struct ipsec_policy_seting *seting, struct blob_attr *co
     FIELD_SET(esp, IPSEC_POLICY_ATTR_ESP);
     FIELD_SET(leftid, IPSEC_POLICY_ATTR_LEFTID);
     FIELD_SET(rightid, IPSEC_POLICY_ATTR_RIGHTID);
-    FIELD_SET(_auto, IPSEC_POLICY_ATTR_AUTO);
+    FIELD_SET(auto, IPSEC_POLICY_ATTR_AUTO);
     FIELD_SET(aggrmode, IPSEC_POLICY_ATTR_AGGRMODE);
     FIELD_SET(ikelifetime, IPSEC_POLICY_ATTR_IKELIFETIME);
     FIELD_SET(keylife, IPSEC_POLICY_ATTR_KEYLIFE);
@@ -133,6 +155,16 @@ static void
 ipsec_policy_status_update(struct vlist_tree *tree, 
         struct vlist_node *node_new, struct vlist_node *node_old)
 {
+    /*struct ipsec_tunnel_status *s_new = container_of(node_new, struct ipsec_tunnel_status, node);*/
+    struct ipsec_tunnel_status *s_old = container_of(node_old, struct ipsec_tunnel_status, node);
+
+    if (node_old) {
+        if (s_old) {
+            free(s_old);
+            s_old = NULL;
+        }
+    }
+
     return;
 }
 
@@ -196,7 +228,7 @@ ipsec_policy_change_config(struct vpn *new, struct vpn *old)
     new_seting = (struct ipsec_policy_seting *)new->seting;
     old_seting = (struct ipsec_policy_seting *)old->seting;
 #define CONFIG_CMP(field) \
-    if (!blob_attr_equal(new_seting->field, old_seting->field)) { \
+    if (!blob_attr_equal(new_seting->_##field, old_seting->_##field)) { \
         LOG(L_DEBUG, "ipsec policy '%s' option '%s' change", new->name, #field); \
         reload = true; \
     }
@@ -213,7 +245,7 @@ ipsec_policy_change_config(struct vpn *new, struct vpn *old)
     CONFIG_CMP(esp);
     CONFIG_CMP(leftid);
     CONFIG_CMP(rightid);
-    CONFIG_CMP(_auto);
+    CONFIG_CMP(auto);
     CONFIG_CMP(aggrmode);
     CONFIG_CMP(ikelifetime);
     CONFIG_CMP(keylife);
@@ -254,12 +286,14 @@ ipsec_policy_update(struct vpn *new, struct vpn *old)
 static int
 ipsec_policy_prepare(struct vpn *vpn)
 {
+    LOG(L_DEBUG, "ipsec policy '%s' prepare", vpn->name);
     return 0;
 }
 
 static int
 ipsec_policy_config(struct vpn *vpn)
 {
+    LOG(L_DEBUG, "ipsec policy '%s' config", vpn->name);
     struct ipsec_policy_seting *seting = (struct ipsec_policy_seting *)vpn->seting;
     char *path = alloca(strlen(ipsec_path) + strlen(vpn->name) + 1);
     FILE *f;
@@ -268,6 +302,7 @@ ipsec_policy_config(struct vpn *vpn)
         return 0;
     }
 
+    sprintf(path, "%s%s", ipsec_path, vpn->name);
     f = fopen(path, "w");
     if (!f) {
         return errno;
@@ -275,13 +310,8 @@ ipsec_policy_config(struct vpn *vpn)
 
     fprintf(f, "conn %s\n", vpn->name);
 #define WRITE_F(field) \
-    if (seting->field) { \
-        fprintf(f, "\t%s=%s", #field, blobmsg_get_string(seting->field)); \
-    }
-
-#define WRITE_F_X(field) \
     if (seting->_##field) { \
-        fprintf(f, "\t%s=%s", #field, blobmsg_get_string(seting->_##field)); \
+        fprintf(f, "\t%s=%s\n", #field, blobmsg_get_string(seting->_##field)); \
     }
 
     WRITE_F(left);
@@ -299,10 +329,8 @@ ipsec_policy_config(struct vpn *vpn)
     WRITE_F(aggrmode);
     WRITE_F(ikelifetime);
     WRITE_F(keylife);
-
-    WRITE_F_X(auto);
+    WRITE_F(auto);
 #undef WRITE_F
-#undef WRITE_F_X
 
     vpn->config_pending = false;
 
@@ -313,10 +341,13 @@ ipsec_policy_config(struct vpn *vpn)
 static int
 ipsec_policy_down(struct vpn *vpn)
 {
+    LOG(L_DEBUG, "ipsec policy '%s' down", vpn->name);
     struct ipsec_policy_status *status = (struct ipsec_policy_status *)vpn->status;
     char cmd[64] = {0};
     sprintf(cmd, "ipsec auto --down %s &", vpn->name);
+#if 0
     system(cmd);
+#endif
     status->up = false;
     vlist_flush_all(&status->status);
     return 0;
@@ -325,13 +356,16 @@ ipsec_policy_down(struct vpn *vpn)
 static int
 ipsec_policy_up(struct vpn *vpn)
 {
+    LOG(L_DEBUG, "ipsec policy '%s' up", vpn->name);
     struct ipsec_policy_status *status = (struct ipsec_policy_status *)vpn->status;
     if (status->up) {
         ipsec_policy_down(vpn);
     }
     char cmd[64] = {0};
     sprintf(cmd, "ipsec auto --up %s &", vpn->name);
+#if 0
     system(cmd);
+#endif
     status->up = true;
     return 0;
 }
@@ -339,18 +373,66 @@ ipsec_policy_up(struct vpn *vpn)
 static int
 ipsec_policy_finish(struct vpn *vpn)
 {
+    LOG(L_DEBUG, "ipsec policy '%s' finish", vpn->name);
     return 0;
 }
 
 static int
 ipsec_policy_dump_info(struct vpn *vpn)
 {
+    struct ipsec_policy_seting *seting = (struct ipsec_policy_seting *)vpn->seting;
+    void *a;
+
+    blobmsg_add_string(&b, "name", vpn->name);
+    blobmsg_add_string(&b, "type", vpn->type->name);
+    blobmsg_add_u8(&b, "pending", vpn->config_pending);
+
+    a = blobmsg_open_table(&b, "config");
+
+#define DUMP_POLICY(field) \
+    if (seting->_##field) { \
+        blobmsg_add_string(&b, #field, (char*)blobmsg_data(seting->_##field)); \
+    }
+
+    DUMP_POLICY(right);
+    DUMP_POLICY(leftsubnet);
+    DUMP_POLICY(rightsubnet);
+    DUMP_POLICY(leftsubnets);
+    DUMP_POLICY(rightsubnets);
+    DUMP_POLICY(type);
+    DUMP_POLICY(authby);
+    DUMP_POLICY(ike);
+    DUMP_POLICY(esp);
+    DUMP_POLICY(leftid);
+    DUMP_POLICY(rightid);
+    DUMP_POLICY(aggrmode);
+    DUMP_POLICY(ikelifetime);
+    DUMP_POLICY(keylife);
+    DUMP_POLICY(auto);
+
+#undef DUMP_POLICY
+
+    blobmsg_close_table(&b, a);
     return 0;
 }
 
 static void
 ipsec_policy_get_status(struct vpn *vpn)
 {
+    struct ipsec_policy_status *s = (struct ipsec_policy_status *)vpn->status;
+    struct ipsec_tunnel_status *status;
+    void *a;
+
+    blob_buf_init(&b, 0);
+    
+    a = blobmsg_open_array(&b, "status");
+
+    vlist_for_each_element(&s->status, status, node) {
+        blobmsg_add_string(&b, "right", status->right);
+        blobmsg_add_string(&b, "status", status->status);
+    }
+    blobmsg_close_array(&b, a);
+    
     return;
 }
 
@@ -379,7 +461,8 @@ static struct vpn_type ipsec_policy_type = {
 };
 
 /** uci config */
-static void ipsec_policy_uci_section_handler(struct vpn_uci_section *s)
+static void
+ipsec_policy_uci_section_handler(struct vpn_uci_section *s)
 {
     const char *name = NULL;
     name = uci_lookup_option_string(s->uci_ctx, s->uci_section, "name");
@@ -424,20 +507,22 @@ ipsec_policy_ubus_get_status(struct ubus_context *ctx, struct ubus_object *obj,
         struct ubus_request_data *req, const char *method,
         struct blob_attr *msg)
 {
-    blob_buf_init(&b, 0);
-    void *a = blobmsg_open_array(&b, "ipsec");
+    /*void *a = blobmsg_open_array(&b, "ipsec");*/
 
     struct vpn *vpn;
-    vlist_for_each_element(&h_vpns, vpn, node) {
-        if (vpn->kind == VPN_KIND_IPSEC) {
-            void *i = blobmsg_open_table(&b, NULL);
-            blobmsg_add_string(&b, "policy", vpn->name);
-            ipsec_policy_get_status(vpn);
-            blobmsg_close_table(&b, i);
-        }
-    }
-
-    blobmsg_close_array(&b, a);
+    vpn = container_of(obj, struct vpn, obj);
+    ipsec_policy_get_status(vpn);
+    /*
+     *vlist_for_each_element(&h_vpns, vpn, node) {
+     *    if (vpn->kind == VPN_KIND_IPSEC) {
+     *        void *i = blobmsg_open_table(&b, NULL);
+     *        blobmsg_add_string(&b, "policy", vpn->name);
+     *        ipsec_policy_get_status(vpn);
+     *        blobmsg_close_table(&b, i);
+     *    }
+     *}
+     *blobmsg_close_array(&b, a);
+     */
     ubus_send_reply(ctx, req, b.head);
     return 0;
 }
@@ -447,6 +532,48 @@ ipsec_policy_ubus_set_status(struct ubus_context *ctx, struct ubus_object *obj,
         struct ubus_request_data *req, const char *method,
         struct blob_attr *msg)
 {
+    struct vpn *vpn;
+    struct ipsec_tunnel_status *status = NULL;
+    struct ipsec_policy_status *s = NULL;
+    struct blob_attr *tb[__IPSEC_STATUS_ATTR_MAX];
+    char *ipsec_right, *ipsec_status;
+
+    blobmsg_parse(ipsec_status_attrs, __IPSEC_STATUS_ATTR_MAX, tb, blob_data(msg), blob_len(msg));
+
+    if (!tb[IPSEC_STATUS_ATTR_RIGHT] || !tb[IPSEC_STATUS_ATTR_STAT])
+        return UBUS_STATUS_INVALID_ARGUMENT;
+
+    vpn = container_of(obj, struct vpn, obj);
+
+    status = calloc_a(sizeof(struct ipsec_tunnel_status), 
+            &ipsec_right, blobmsg_data_len(tb[IPSEC_STATUS_ATTR_RIGHT])+1,
+            &ipsec_status, blobmsg_data_len(tb[IPSEC_STATUS_ATTR_STAT])+1);
+    if (!status) {
+        LOG(L_WARNING, "ipsec tunnel '%s' status object alloc error!!!!", vpn->name);
+        return UBUS_STATUS_NO_DATA;
+    }
+
+    status->right = strcpy(ipsec_right, blobmsg_data(tb[IPSEC_STATUS_ATTR_RIGHT]));
+    status->status = strcpy(ipsec_status, blobmsg_data(tb[IPSEC_STATUS_ATTR_STAT]));
+
+    s = (struct ipsec_policy_status *)vpn->status;
+    vlist_add(&s->status, &status->node, status->right);
+
+    return 0;
+}
+
+static int
+ipsec_policy_ubus_dump(struct ubus_context *ctx, struct ubus_object *obj,
+        struct ubus_request_data *req, const char *method,
+        struct blob_attr *msg)
+{
+    struct vpn *vpn;
+
+    vpn = container_of(obj, struct vpn, obj);
+    blob_buf_init(&b, 0);
+    ipsec_policy_dump_info(vpn);
+    ubus_send_reply(ctx, req, b.head);
+
     return 0;
 }
 
@@ -454,7 +581,9 @@ static struct ubus_method ipsec_policy_obj_methods[] = {
     { .name = "up", .handler = ipsec_policy_ubus_up },
     { .name = "down", .handler = ipsec_policy_ubus_down },
     { .name = "get_status", .handler = ipsec_policy_ubus_get_status },
-    { .name = "set_status", .handler = ipsec_policy_ubus_set_status },
+    UBUS_METHOD("set_status", ipsec_policy_ubus_set_status, ipsec_status_attrs),
+    /*{ .name = "set_status", .handler = ipsec_policy_ubus_set_status },*/
+    { .name = "dump", .handler = ipsec_policy_ubus_dump },
 };
 
 static struct ubus_object_type ipsec_policy_obj_type =

@@ -100,7 +100,6 @@ vpn_setup(const char *name, enum vpn_kind kind, const struct vpn_type *type,
     }
 
     type->ops->config(vpn);
-    type->ops->setup(vpn);
     if (type->ops->prepare) { type->ops->prepare(vpn); }
     type->ops->up(vpn);
     if (type->ops->finish) { type->ops->finish(vpn); }

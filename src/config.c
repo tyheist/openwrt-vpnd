@@ -35,7 +35,7 @@ config_init_section(const char *name, enum vpn_kind kind, const char *vpn_type, 
         goto error;
     }
 
-    p = container_of(s, struct vpn_uci_package, sections);
+    p = s->package;
     if (asprintf(&path, "%s.%s", p->name, s->name) == -1)
         goto error;
 
@@ -106,6 +106,7 @@ config_init_package(struct vpn_uci_package *u)
         for (i=0; i<u->n_sections; ++i) {
             if (!strcmp(u->sections[i].name, s->type)) {
                 u->sections[i].uci_ctx = u->uci_ctx;
+                u->sections[i].package = u;
                 u->sections[i].uci_section = s;
                 u->sections[i].init(&u->sections[i]);
             }
