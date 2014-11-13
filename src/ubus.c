@@ -53,6 +53,16 @@ vpn_ubus_add_static_object(struct ubus_object *obj)
 }
 
 void
+vpn_ubus_remove_object(struct vpn *vpn)
+{
+    if (!vpn->obj.name)
+        return;
+
+    ubus_remove_object(ubus_ctx, &vpn->obj);
+    free((void*) vpn->obj.name);
+}
+
+void
 vpn_ubus_obj_register(struct vpn_ubus_obj *obj)
 {
     list_add(&obj->list, &h_ubus_obj);

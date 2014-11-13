@@ -24,5 +24,6 @@ struct vpn_ubus_obj *vpn_ubus_obj_lookup(const char *path);
 
 void vpn_ubus_add_dynamic_object(struct vpn *vpn);
 void vpn_ubus_add_static_object(struct ubus_object *obj);
+void vpn_ubus_remove_object(struct vpn *vpn);
 #endif /** __VPND_UBUS_H__ */
 

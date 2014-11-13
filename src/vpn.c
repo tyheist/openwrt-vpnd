@@ -45,6 +45,7 @@ vpn_alloc(const char *name, enum vpn_kind kind, const struct vpn_type *type,
     vpn->config = config;
     vpn->type   = type;
     vpn->config_pending = true;
+    vpn->available = false;
 
     /** ubus object init */
     if (obj) {
@@ -74,10 +75,10 @@ vpn_free(struct vpn *vpn)
     if (!vpn)
         return;
 
-    if (vpn->type->free) {
-        vpn->type->free(vpn);
-    }
-
+    if (vpn->type->free) { vpn->type->free(vpn); }
+    if (vpn->config) { free(vpn->config); }
+    if (vpn->available) { avl_delete(&h_vpns.avl, &vpn->node.avl); }
+    vpn_ubus_remove_object(vpn);
     free(vpn);
     vpn = NULL;
 }
@@ -100,6 +101,7 @@ vpn_setup(const char *name, enum vpn_kind kind, const struct vpn_type *type,
         LOG(L_WARNING, "find vpn object (%s) error", vpn->name);
         goto error;
     }
+    vpn->available = true;
 
     type->ops->config(vpn);
     if (type->ops->prepare) { type->ops->prepare(vpn); }

@@ -118,8 +118,13 @@ void
 config_init_all(void)
 {
     struct vpn_uci_package *p;
+
+    vlist_update(&h_vpns);
+
     list_for_each_entry(p, &h_vpn_uci_package , list) {
         config_init_package(p);
     }
+
+    vlist_flush(&h_vpns);
 }
 

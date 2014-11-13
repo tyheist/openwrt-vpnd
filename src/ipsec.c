@@ -26,18 +26,20 @@ struct ipsec_policy_seting {
                      *_right,
                      *_leftsubnet,
                      *_rightsubnet,
-                     *_leftsubnets,
-                     *_rightsubnets,
+                     /**_leftsubnets,*/
+                     /**_rightsubnets,*/
                      *_type,
                      *_authby,
                      *_ike,
-                     *_esp,
+                     *_phase2alg,
+                     *_phase2,
                      *_leftid,
                      *_rightid,
                      *_auto,
                      *_aggrmode,
                      *_ikelifetime,
-                     *_keylife;
+                     *_keylife,
+                     *_psk;
 };
 
 enum ipsec_tunnel_stat {
@@ -97,18 +99,20 @@ enum {
     IPSEC_POLICY_ATTR_RIGHT,
     IPSEC_POLICY_ATTR_LEFTSUBNET,
     IPSEC_POLICY_ATTR_RIGHTSUBNET,
-    IPSEC_POLICY_ATTR_LEFTSUBNETS,
-    IPSEC_POLICY_ATTR_RIGHTSUBNETS,
+    /*IPSEC_POLICY_ATTR_LEFTSUBNETS,*/
+    /*IPSEC_POLICY_ATTR_RIGHTSUBNETS,*/
     IPSEC_POLICY_ATTR_TYPE,
     IPSEC_POLICY_ATTR_AUTHBY,
     IPSEC_POLICY_ATTR_IKE,
-    IPSEC_POLICY_ATTR_ESP,
+    IPSEC_POLICY_ATTR_PHASE2ALG,
+    IPSEC_POLICY_ATTR_PHASE2,
     IPSEC_POLICY_ATTR_LEFTID,
     IPSEC_POLICY_ATTR_RIGHTID,
     IPSEC_POLICY_ATTR_AUTO,
     IPSEC_POLICY_ATTR_AGGRMODE,
     IPSEC_POLICY_ATTR_IKELIFETIME,
     IPSEC_POLICY_ATTR_KEYLIFE,
+    IPSEC_POLICY_ATTR_PSK,
     __IPSEC_POLICY_ATTR_MAX
 };
 
@@ -121,18 +125,20 @@ static const struct blobmsg_policy ipsec_policy_attrs[__IPSEC_POLICY_ATTR_MAX] =
     [IPSEC_POLICY_ATTR_RIGHT] = { .name = "right", .type = BLOBMSG_TYPE_STRING },
     [IPSEC_POLICY_ATTR_LEFTSUBNET] = { .name = "leftsubnet", .type = BLOBMSG_TYPE_STRING },
     [IPSEC_POLICY_ATTR_RIGHTSUBNET] = { .name = "rightsubnet", .type = BLOBMSG_TYPE_STRING },
-    [IPSEC_POLICY_ATTR_LEFTSUBNETS] = { .name = "leftsubnets", .type = BLOBMSG_TYPE_STRING },
-    [IPSEC_POLICY_ATTR_RIGHTSUBNETS] = { .name = "rightsubnets", .type = BLOBMSG_TYPE_STRING },
+    /*[IPSEC_POLICY_ATTR_LEFTSUBNETS] = { .name = "leftsubnets", .type = BLOBMSG_TYPE_STRING },*/
+    /*[IPSEC_POLICY_ATTR_RIGHTSUBNETS] = { .name = "rightsubnets", .type = BLOBMSG_TYPE_STRING },*/
     [IPSEC_POLICY_ATTR_TYPE] = { .name = "type", .type = BLOBMSG_TYPE_STRING },
     [IPSEC_POLICY_ATTR_AUTHBY] = { .name = "authby", .type = BLOBMSG_TYPE_STRING },
     [IPSEC_POLICY_ATTR_IKE] = { .name = "ike", .type = BLOBMSG_TYPE_STRING },
-    [IPSEC_POLICY_ATTR_ESP] = { .name = "esp", .type = BLOBMSG_TYPE_STRING },
+    [IPSEC_POLICY_ATTR_PHASE2ALG] = { .name = "phase2alg", .type = BLOBMSG_TYPE_STRING },
+    [IPSEC_POLICY_ATTR_PHASE2] = { .name = "phase2", .type = BLOBMSG_TYPE_STRING },
     [IPSEC_POLICY_ATTR_LEFTID] = { .name = "leftid", .type = BLOBMSG_TYPE_STRING },
-    [IPSEC_POLICY_ATTR_RIGHTID] = { .name = "rightd", .type = BLOBMSG_TYPE_STRING },
+    [IPSEC_POLICY_ATTR_RIGHTID] = { .name = "rightid", .type = BLOBMSG_TYPE_STRING },
     [IPSEC_POLICY_ATTR_AUTO] = { .name = "auto", .type = BLOBMSG_TYPE_STRING },
     [IPSEC_POLICY_ATTR_AGGRMODE] = { .name = "aggrmode", .type = BLOBMSG_TYPE_STRING },
     [IPSEC_POLICY_ATTR_IKELIFETIME] = { .name = "ikelifetime", .type = BLOBMSG_TYPE_STRING },
     [IPSEC_POLICY_ATTR_KEYLIFE] = { .name = "keylife", .type = BLOBMSG_TYPE_STRING },
+    [IPSEC_POLICY_ATTR_PSK] = { .name = "psk", .type = BLOBMSG_TYPE_STRING },
 };
 
 enum {
@@ -188,18 +194,20 @@ ipsec_policy_config_set(struct ipsec_policy_seting *seting, struct blob_attr *co
     FIELD_SET(right, IPSEC_POLICY_ATTR_RIGHT);
     FIELD_SET(leftsubnet, IPSEC_POLICY_ATTR_LEFTSUBNET);
     FIELD_SET(rightsubnet, IPSEC_POLICY_ATTR_RIGHTSUBNET);
-    FIELD_SET(leftsubnets, IPSEC_POLICY_ATTR_LEFTSUBNETS);
-    FIELD_SET(rightsubnets, IPSEC_POLICY_ATTR_RIGHTSUBNETS);
+    /*FIELD_SET(leftsubnets, IPSEC_POLICY_ATTR_LEFTSUBNETS);*/
+    /*FIELD_SET(rightsubnets, IPSEC_POLICY_ATTR_RIGHTSUBNETS);*/
     FIELD_SET(type, IPSEC_POLICY_ATTR_TYPE);
     FIELD_SET(authby, IPSEC_POLICY_ATTR_AUTHBY);
     FIELD_SET(ike, IPSEC_POLICY_ATTR_IKE);
-    FIELD_SET(esp, IPSEC_POLICY_ATTR_ESP);
+    FIELD_SET(phase2alg, IPSEC_POLICY_ATTR_PHASE2ALG);
+    FIELD_SET(phase2, IPSEC_POLICY_ATTR_PHASE2);
     FIELD_SET(leftid, IPSEC_POLICY_ATTR_LEFTID);
     FIELD_SET(rightid, IPSEC_POLICY_ATTR_RIGHTID);
     FIELD_SET(auto, IPSEC_POLICY_ATTR_AUTO);
     FIELD_SET(aggrmode, IPSEC_POLICY_ATTR_AGGRMODE);
     FIELD_SET(ikelifetime, IPSEC_POLICY_ATTR_IKELIFETIME);
     FIELD_SET(keylife, IPSEC_POLICY_ATTR_KEYLIFE);
+    FIELD_SET(psk, IPSEC_POLICY_ATTR_PSK);
 #undef FIELD_SET
 }
 
@@ -289,18 +297,20 @@ ipsec_policy_change_config(struct vpn *new, struct vpn *old)
     CONFIG_CMP(right);
     CONFIG_CMP(leftsubnet);
     CONFIG_CMP(rightsubnet);
-    CONFIG_CMP(leftsubnets);
-    CONFIG_CMP(rightsubnets);
+    /*CONFIG_CMP(leftsubnets);*/
+    /*CONFIG_CMP(rightsubnets);*/
     CONFIG_CMP(type);
     CONFIG_CMP(authby);
     CONFIG_CMP(ike);
-    CONFIG_CMP(esp);
+    CONFIG_CMP(phase2alg);
+    CONFIG_CMP(phase2);
     CONFIG_CMP(leftid);
     CONFIG_CMP(rightid);
     CONFIG_CMP(auto);
     CONFIG_CMP(aggrmode);
     CONFIG_CMP(ikelifetime);
     CONFIG_CMP(keylife);
+    CONFIG_CMP(psk);
 #undef CONFIG_CMP
 
     if (reload) {
@@ -309,11 +319,26 @@ ipsec_policy_change_config(struct vpn *new, struct vpn *old)
         free(old_config);
 
         /** reload config */
-        ipsec_policy_config_set(old->seting, old->config);
+        ipsec_policy_config_set(old_seting, old->config);
         old->config_pending = true;
     }
 
     vpn_free(new);
+}
+
+static void
+ipsec_policy_remove_config(struct vpn *vpn)
+{
+    char *path = alloca(strlen(ipsec_path) + strlen(vpn->name) + 16);
+
+    vpn->type->ops->down(vpn);
+
+    sprintf(path, "%s%s.conf", ipsec_path, vpn->name);
+    unlink(path);
+    sprintf(path, "%s%s.secrets", ipsec_path, vpn->name);
+    unlink(path);
+
+    vpn_free(vpn);
 }
 
 /**
@@ -329,6 +354,7 @@ ipsec_policy_update(struct vpn *new, struct vpn *old)
         ipsec_policy_change_config(new, old);
     } else if (old) {
         LOG(L_NOTICE, "remove ipsec policy '%s'", old->name);
+        ipsec_policy_remove_config(old);
     } else if (new) {
         LOG(L_NOTICE, "create ipsec policy '%s'", new->name);
         /** do nothing */
@@ -347,16 +373,17 @@ ipsec_policy_config(struct vpn *vpn)
 {
     LOG(L_DEBUG, "ipsec policy '%s' config", vpn->name);
     struct ipsec_policy_seting *seting = (struct ipsec_policy_seting *)vpn->seting;
-    char *path = alloca(strlen(ipsec_path) + strlen(vpn->name) + 1);
+    char *path = alloca(strlen(ipsec_path) + strlen(vpn->name) + 16);
     FILE *f;
     if (!vpn->config_pending) {
         LOG(L_NOTICE, "ipsec policy '%s' config not pending", vpn->name);
         return 0;
     }
 
-    sprintf(path, "%s%s", ipsec_path, vpn->name);
+    sprintf(path, "%s%s.conf", ipsec_path, vpn->name);
     f = fopen(path, "w");
     if (!f) {
+        LOG(L_DEBUG, "Can not open file '%s'", path);
         return errno;
     }
 
@@ -370,23 +397,38 @@ ipsec_policy_config(struct vpn *vpn)
     WRITE_F(right);
     WRITE_F(leftsubnet);
     WRITE_F(rightsubnet);
-    WRITE_F(leftsubnets);
-    WRITE_F(rightsubnets);
+    /*WRITE_F(leftsubnets);*/
+    /*WRITE_F(rightsubnets);*/
     WRITE_F(type);
     WRITE_F(authby);
     WRITE_F(ike);
-    WRITE_F(esp);
+    WRITE_F(phase2alg);
+    WRITE_F(phase2);
     WRITE_F(leftid);
     WRITE_F(rightid);
+    WRITE_F(auto);
     WRITE_F(aggrmode);
     WRITE_F(ikelifetime);
     WRITE_F(keylife);
-    WRITE_F(auto);
 #undef WRITE_F
+    fclose(f);
+
+    sprintf(path, "%s%s.secrets", ipsec_path, vpn->name);
+    f = fopen(path, "w");
+    if (!f) {
+        LOG(L_DEBUG, "Can not open file '%s'", path);
+        return errno;
+    }
+    
+    fprintf(f, "%s %s : PSK \"%s\"\n",
+            blobmsg_get_string(seting->_leftid),
+            blobmsg_get_string(seting->_rightid),
+            blobmsg_get_string(seting->_psk));
+
+    fclose(f);
 
     vpn->config_pending = false;
 
-    fclose(f);
     return 0;
 }
 
@@ -449,18 +491,20 @@ ipsec_policy_dump_info(struct vpn *vpn)
     DUMP_POLICY(right);
     DUMP_POLICY(leftsubnet);
     DUMP_POLICY(rightsubnet);
-    DUMP_POLICY(leftsubnets);
-    DUMP_POLICY(rightsubnets);
+    /*DUMP_POLICY(leftsubnets);*/
+    /*DUMP_POLICY(rightsubnets);*/
     DUMP_POLICY(type);
     DUMP_POLICY(authby);
     DUMP_POLICY(ike);
-    DUMP_POLICY(esp);
+    DUMP_POLICY(phase2alg);
+    DUMP_POLICY(phase2);
     DUMP_POLICY(leftid);
     DUMP_POLICY(rightid);
+    DUMP_POLICY(auto);
     DUMP_POLICY(aggrmode);
     DUMP_POLICY(ikelifetime);
     DUMP_POLICY(keylife);
-    DUMP_POLICY(auto);
+    DUMP_POLICY(psk);
 
 #undef DUMP_POLICY
 
@@ -597,6 +641,32 @@ ipsec_setup_free(struct vpn *vpn)
 static void
 ipsec_setup_change_config(struct vpn *new, struct vpn *old)
 {
+    struct blob_attr *old_config = old->config;
+    struct ipsec_setup_seting *new_seting, *old_seting;
+    int i = 0;
+    bool reload = false;
+
+    new_seting = (struct ipsec_setup_seting*)new->seting;
+    old_seting = (struct ipsec_setup_seting*)old->seting;
+    for (i=0; i<IPSEC_LINK_MAX; ++i) {
+        if (strcmp(new_seting->link[i].ifname, old_seting->link[i].ifname)) {
+            reload = true;
+            break;
+        }
+    }
+
+    if (reload) {
+        old->config = new->config;
+        new->config = NULL;
+        free(old_config);
+
+        /** reload config */
+        ipsec_setup_config_set(old_seting, old->config);
+        old->config_pending = true;
+    }
+
+    vpn_free(new);
+
     return;
 }
 
@@ -625,6 +695,36 @@ static int
 ipsec_setup_config(struct vpn *vpn)
 {
     LOG(L_DEBUG, "ipsec setup object config");
+    struct ipsec_setup_seting *seting = (struct ipsec_setup_seting*)vpn->seting;
+    char *path = alloca(strlen("/etc/ipsec.conf") + 1);
+    int i = 0;
+    FILE *f;
+
+    if (!vpn->config_pending) {
+        LOG(L_NOTICE, "ipsec setup '%s' config not pending", vpn->name);
+        return 0;
+    }
+
+    sprintf(path, "/etc/ipsec.conf");
+    f = fopen(path, "w");
+    if (!f) {
+        LOG(L_DEBUG, "Can not open file '%s'", path);
+        return errno;
+    }
+
+    fprintf(f, "version 2\n\n");
+    fprintf(f, "config setup\n");
+    fprintf(f, "\tinterface=\"");
+    for (i=0; i<IPSEC_LINK_MAX; ++i) {
+        if (seting->link[i].ifname[0] != '\0') {
+            fprintf(f, "ipsec%d=%s ", i, seting->link[i].ifname);
+        }
+    }
+    fprintf(f, "\"\n");
+
+    vpn->config_pending = false;
+    fclose(f);
+
     return 0;
 }
 
@@ -847,6 +947,7 @@ ipsec_main_ubus_reload(struct ubus_context *ctx, struct ubus_object *obj,
         struct blob_attr *msg)
 {
     LOG(L_DEBUG, "ipsec reload!!!!");
+    config_init_all();
     return 0;
 }
 
