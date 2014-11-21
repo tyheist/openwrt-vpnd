@@ -1,0 +1,4 @@
+config setup
+    option enable '0'
+    option plutodebug 'none'
+

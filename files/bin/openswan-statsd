@@ -1,0 +1,49 @@
+#!/usr/bin/lua
+--[[
+1= push
+2= ipsec-tunnel-test
+3= if_stats
+4= /proc/net/dev/eth0.2
+5= ;
+6= push
+7= ipsec-tunnel-test
+8= tunnel
+9= down
+10= ;
+11= push
+12= ipsec-tunnel-test
+13= phase1
+14= unchanged
+15= ;
+16= push
+17= ipsec-tunnel-test
+18= phase2
+19= down
+20= ;
+21= drop
+22= ipsec-tunnel-test
+23= nfmark-me/him
+24= 0x0/0x0
+--]]
+
+require "luci.sys"
+
+name   = arg[2]:match("ipsec%-tunnel%-(%a+)")
+tunnel = arg[9]
+phase1 = arg[14]
+phase2 = arg[19]
+status = "load"
+
+if tunnel == "phase1" then
+    status = "phase1" .. phase1
+elseif tunnel == "phase2" then
+    status = "phase2" .. phase2
+elseif tunnel == "up" then
+    status = "up"
+elseif tunnel == "down" then
+    status = "down"
+end
+
+luci.sys.call("ubus call ipsec.policy." .. name .. " set_status " ..
+        "\"{ \\\"right\\\" : \\\"test\\\" , \\\"stat\\\" : \\\"" .. status .. "\\\"}\" &")
+

@@ -28,6 +28,7 @@
 
 extern const char *config_path;
 extern const char *ipsec_path;
+extern bool dump;
 
 #define __init __attribute__((constructor))
 
@@ -56,6 +57,16 @@ static inline void system_fd_set_cloexec(int fd)
 #ifdef FD_CLOEXEC
     fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
 #endif
+}
+
+static inline int run_cmd(const char *cmd)
+{
+    if (dump) {
+        LOG(L_DEBUG, "%s", cmd);
+    } else {
+        return system(cmd);
+    }
+    return 0;
 }
 
 #endif /** __VPND_UTILS_H__ */

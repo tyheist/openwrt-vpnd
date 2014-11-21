@@ -10,7 +10,7 @@ define Package/vpnd
   SECTION:=net
   CATEGORY:=Network
   SUBMENU:=VPN
-  DEPENDS:=+libuci +libubus +libubox
+  DEPENDS:=+libuci +libubus +libubox +libblobmsg-json
   TITLE:=vpn manage daemon
 endef
 

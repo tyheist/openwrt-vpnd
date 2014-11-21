@@ -103,10 +103,11 @@ vpn_setup(const char *name, enum vpn_kind kind, const struct vpn_type *type,
     }
     vpn->available = true;
 
-    type->ops->config(vpn);
-    if (type->ops->prepare) { type->ops->prepare(vpn); }
-    type->ops->up(vpn);
-    if (type->ops->finish) { type->ops->finish(vpn); }
+    if (0 == type->ops->config(vpn)) {
+        if (type->ops->prepare) { type->ops->prepare(vpn); }
+        type->ops->up(vpn);
+        if (type->ops->finish) { type->ops->finish(vpn); }
+    }
 
     return;
 error:

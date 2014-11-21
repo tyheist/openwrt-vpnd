@@ -26,12 +26,13 @@
 static bool use_syslog = true;
 
 #define DEFAULT_CONFIG_PATH NULL
-#define DEFAULT_IPSEC_PATH  "/etc/ipsec/"
+#define DEFAULT_IPSEC_PATH  "/tmp/ipsec.d/"
 #define DEFAULT_LOG_LEVEL L_NOTICE
 
 const char *config_path = DEFAULT_CONFIG_PATH;
 const char *ipsec_path = DEFAULT_IPSEC_PATH;
 static char **global_argv;
+bool dump = false;
 
 static int log_level = DEFAULT_LOG_LEVEL;
 static const int log_class[] = {
@@ -68,6 +69,7 @@ usage(const char *progname)
             "                      (default: "DEFAULT_IPSEC_PATH")\n"
             " -l <level>:        Log output level (0-4)\n"
             "                      (default: %d)\n"
+            " -d :               Dump system command\n"
             "\n", progname, DEFAULT_LOG_LEVEL);
     return 0;
 }
@@ -103,7 +105,7 @@ main(int argc, char **argv)
 
     global_argv = argv;
 
-    while ((ch = getopt(argc, argv, "s:i:l:")) != -1) {
+    while ((ch = getopt(argc, argv, "s:i:l:d")) != -1) {
         switch (ch) {
             case 's':
                 socket = optarg;
@@ -115,6 +117,9 @@ main(int argc, char **argv)
                 log_level = atoi(optarg);
                 if (log_level >= ARRAY_SIZE(log_class))
                     log_level = ARRAY_SIZE(log_class) - 1;
+                break;
+            case 'd':
+                dump = true;
                 break;
             default:
                 return usage(argv[0]);
@@ -131,6 +136,8 @@ main(int argc, char **argv)
         return 1;
     }
 
+    ipsec_init();
+
     config_init_all();
 
     uloop_run();
@@ -140,6 +147,8 @@ main(int argc, char **argv)
     LOG(L_NOTICE, "GOING TO EXIT!!!!");
     if (use_syslog)
         closelog();
+
+    ipsec_final();
 
     return 0;
 }

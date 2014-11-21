@@ -47,6 +47,8 @@ struct vpn_ops {
     int (*setup)(struct vpn *);
     int (*up)(struct vpn *);
     int (*down)(struct vpn *);
+    int (*enable)(struct vpn *);
+    int (*disable)(struct vpn *);
     int (*finish)(struct vpn *);
     int (*dump_info)(struct vpn *);
 };
@@ -93,5 +95,9 @@ void vpn_free(struct vpn *vpn);
 void vpn_setup(const char *name, enum vpn_kind kind, const struct vpn_type *type, 
         struct vpn_ubus_obj *obj, struct blob_attr *config, 
         const char *uci_p, const char *uci_s);
+
+
+void ipsec_init(void);
+void ipsec_final(void);
 #endif /** __VPND_VPN_H__ */
 

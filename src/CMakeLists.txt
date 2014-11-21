@@ -9,8 +9,9 @@ SET(SOURCES
     main.c ubus.c vpn.c config.c
     ipsec.c)
 
+find_library(json NAMES json-c json)
 SET(LIBS
-    ubox ubus uci)
+    ubox ubus uci ${json} blobmsg_json)
 
 IF(DEBUG)
     ADD_DEFINITIONS(-DDEBUG -g3)

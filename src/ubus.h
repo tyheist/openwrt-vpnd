@@ -16,6 +16,8 @@
 
 #include "vpn.h"
 
+extern struct ubus_context *ubus_ctx;
+
 int vpnd_ubus_init(const char *path);
 void vpnd_ubus_done(void);
 void vpn_ubus_obj_register(struct vpn_ubus_obj *obj);
