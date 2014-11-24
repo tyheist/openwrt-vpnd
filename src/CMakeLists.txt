@@ -6,7 +6,7 @@ ADD_DEFINITIONS(-Os -Wall -Werror --std=gnu99 -Wmissing-declarations)
 SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
 
 SET(SOURCES
-    main.c ubus.c vpn.c config.c
+    main.c ubus.c vpn.c config.c cmd.c
     ipsec.c)
 
 find_library(json NAMES json-c json)
