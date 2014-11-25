@@ -63,7 +63,7 @@ command_complete(struct runqueue *q, struct runqueue_task *t)
 }
 
 void
-add_command(int argc, ...)
+add_command(int timeout, int argc, ...)
 {
     static const struct runqueue_task_type cmd_type = {
         .run = command_run,
@@ -75,7 +75,9 @@ add_command(int argc, ...)
     cmd = calloc(1, sizeof(*cmd));
     cmd->proc.task.type = &cmd_type;
     cmd->proc.task.complete = command_complete;
-    cmd->proc.task.run_timeout = 1000;
+    if (timeout > 0) {
+        cmd->proc.task.run_timeout = timeout;
+    }
     cmd->argc = argc;
     cmd->argv = calloc(1, sizeof(char*) * (cmd->argc + 1));
 

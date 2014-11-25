@@ -21,5 +21,5 @@ struct command {
     char **argv;
 };
 
-void add_command(int argc, ...);
+void add_command(int timeout, int argc, ...);
 #endif /** __CMD_H__ */

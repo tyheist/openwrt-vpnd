@@ -28,6 +28,7 @@ endef
 define Package/vpnd/install
     $(INSTALL_DIR) $(1)/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/vpnd $(1)/sbin/
+	$(CP) ./files/* $(1)/
 endef
 
 $(eval $(call BuildPackage,vpnd))

@@ -46,6 +46,9 @@ struct ipsec_policy_seting {
                      *_aggrmode,
                      *_ikelifetime,
                      *_keylife,
+                     *_dpddelay,
+                     *_dpdtimeout,
+                     *_dpdaction,
                      *_psk;
 };
 
@@ -111,6 +114,9 @@ enum {
     IPSEC_POLICY_ATTR_KEYLIFE,
     IPSEC_POLICY_ATTR_PSK,
     IPSEC_POLICY_ATTR_ENABLE,
+    IPSEC_POLICY_ATTR_DPDDELAY,
+    IPSEC_POLICY_ATTR_DPDTIMEOUT,
+    IPSEC_POLICY_ATTR_DPDACTION,
     __IPSEC_POLICY_ATTR_MAX
 };
 
@@ -138,6 +144,9 @@ static const struct blobmsg_policy ipsec_policy_attrs[__IPSEC_POLICY_ATTR_MAX] =
     [IPSEC_POLICY_ATTR_KEYLIFE] = { .name = "keylife", .type = BLOBMSG_TYPE_STRING },
     [IPSEC_POLICY_ATTR_PSK] = { .name = "psk", .type = BLOBMSG_TYPE_STRING },
     [IPSEC_POLICY_ATTR_ENABLE] = { .name = "enable", .type = BLOBMSG_TYPE_BOOL },
+    [IPSEC_POLICY_ATTR_DPDDELAY] = { .name = "dpddelay", .type = BLOBMSG_TYPE_STRING },
+    [IPSEC_POLICY_ATTR_DPDTIMEOUT] = { .name = "dpdtimeout", .type = BLOBMSG_TYPE_STRING },
+    [IPSEC_POLICY_ATTR_DPDACTION] = { .name = "dpdaction", .type = BLOBMSG_TYPE_STRING },
 };
 
 enum {
@@ -204,6 +213,9 @@ ipsec_policy_config_set(struct ipsec_policy_seting *seting, struct blob_attr *co
     FIELD_SET(ikelifetime, IPSEC_POLICY_ATTR_IKELIFETIME);
     FIELD_SET(keylife, IPSEC_POLICY_ATTR_KEYLIFE);
     FIELD_SET(psk, IPSEC_POLICY_ATTR_PSK);
+    FIELD_SET(dpddelay, IPSEC_POLICY_ATTR_DPDDELAY);
+    FIELD_SET(dpdtimeout, IPSEC_POLICY_ATTR_DPDTIMEOUT);
+    FIELD_SET(dpdaction, IPSEC_POLICY_ATTR_DPDACTION);
 
     FIELD_SET(enable, IPSEC_POLICY_ATTR_ENABLE);
 #undef FIELD_SET
@@ -310,6 +322,9 @@ ipsec_policy_change_config(struct vpn *new, struct vpn *old)
     CONFIG_CMP(ikelifetime);
     CONFIG_CMP(keylife);
     CONFIG_CMP(psk);
+    CONFIG_CMP(dpddelay);
+    CONFIG_CMP(dpdtimeout);
+    CONFIG_CMP(dpdaction);
 
     CONFIG_CMP(enable);
 #undef CONFIG_CMP
@@ -472,6 +487,9 @@ ipsec_policy_config(struct vpn *vpn)
     WRITE_F(aggrmode);
     WRITE_F(ikelifetime);
     WRITE_F(keylife);
+    WRITE_F(dpddelay);
+    WRITE_F(dpdtimeout);
+    WRITE_F(dpdaction);
 #undef WRITE_F
     fclose(f);
 
@@ -504,7 +522,7 @@ ipsec_policy_down(struct vpn *vpn)
     if (status->up) {
         /*sprintf(cmd, "ipsec auto --down %s &", vpn->name);*/
         /*run_cmd(cmd);*/
-        add_command(4, "ipsec", "auto", "--down", vpn->name);
+        add_command(500, 4, "ipsec", "auto", "--down", vpn->name);
         status->up = false;
         vlist_flush_all(&status->status);
     }
@@ -535,7 +553,7 @@ ipsec_policy_up(struct vpn *vpn)
     /*char cmd[64] = {0};*/
     /*sprintf(cmd, "ipsec auto --up %s &", vpn->name);*/
     /*run_cmd(cmd);*/
-    add_command(4, "ipsec", "auto", "--up", vpn->name);
+    add_command(1000, 4, "ipsec", "auto", "--up", vpn->name);
     status->up = true;
     return 0;
 }
@@ -551,8 +569,8 @@ ipsec_policy_enable(struct vpn *vpn)
      *run_cmd(cmd);
      */
 
-    add_command(3, "ipsec", "auto", "--rereadsecrets");
-    add_command(4, "ipsec", "auto", "--replace", vpn->name);
+    add_command(500, 3, "ipsec", "auto", "--rereadsecrets");
+    add_command(500, 4, "ipsec", "auto", "--replace", vpn->name);
     return 0;
 }
 
@@ -566,7 +584,7 @@ ipsec_policy_disable(struct vpn *vpn)
     /*sprintf(cmd, "ipsec auto --delete %s &", vpn->name);*/
     /*run_cmd(cmd);*/
 
-    add_command(4, "ipsec", "auto", "--delete", vpn->name);
+    add_command(500, 4, "ipsec", "auto", "--delete", vpn->name);
 
     sprintf(path, "%s%s.conf", ipsec_path, vpn->name);
     unlink(path);
@@ -622,7 +640,9 @@ ipsec_policy_dump_info(struct vpn *vpn)
     DUMP_POLICY(ikelifetime);
     DUMP_POLICY(keylife);
     DUMP_POLICY(psk);
-
+    DUMP_POLICY(dpddelay);
+    DUMP_POLICY(dpdtimeout);
+    DUMP_POLICY(dpdaction);
 #undef DUMP_POLICY
 
     blobmsg_close_table(&b, a);
@@ -838,7 +858,7 @@ ipsec_setup_down(struct vpn *vpn)
     struct ipsec_setup_status *status = (struct ipsec_setup_status*)vpn->status;
     if (status->running) {
         /*run_cmd("/etc/init.d/ipsec stop & >/dev/null 2>&1");*/
-        add_command(2, "/etc/init.d/ipsec", "stop");
+        add_command(1000, 2, "/etc/init.d/ipsec", "stop");
         status->running = false;
     }
     return 0;
@@ -853,7 +873,7 @@ ipsec_setup_up(struct vpn *vpn)
     if (blobmsg_get_bool(seting->_enable)) {
         if (!status->running) {
             /*run_cmd("/etc/init.d/ipsec restart & >/dev/null 2>&1");*/
-            add_command(2, "/etc/init.d/ipsec", "restart");
+            add_command(4000, 2, "/etc/init.d/ipsec", "restart");
             status->running = true;
         }
     } else {
@@ -1081,7 +1101,7 @@ ipsec_main_ubus_restart(struct ubus_context *ctx, struct ubus_object *obj,
 {
     LOG(L_DEBUG, "ipsec restart!!!!");
     /*run_cmd("/etc/init.d/ipsec restart");*/
-    add_command(2, "/etc/init.d/ipsec", "restart");
+    add_command(4000, 2, "/etc/init.d/ipsec", "restart");
     return 0;
 }
 
@@ -1101,7 +1121,7 @@ ipsec_main_ubus_start(struct ubus_context *ctx, struct ubus_object *obj,
         struct blob_attr *msg)
 {
     /*run_cmd("/etc/init.d/ipsec start");*/
-    add_command(2, "/etc/init.d/ipsec", "start");
+    add_command(4000, 2, "/etc/init.d/ipsec", "start");
     return 0;
 }
 
@@ -1111,7 +1131,7 @@ ipsec_main_ubus_stop(struct ubus_context *ctx, struct ubus_object *obj,
         struct blob_attr *msg)
 {
     /*run_cmd("/etc/init.d/ipsec stop");*/
-    add_command(2, "/etc/init.d/ipsec", "stop");
+    add_command(2000, 2, "/etc/init.d/ipsec", "stop");
     return 0;
 }
 
