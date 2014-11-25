@@ -1,9 +1,0 @@
-#!/bin/sh /etc/rc.common
-
-START=80
-STOP=20
-
-restart()
-{
-    ubus call ipsec reload
-}
