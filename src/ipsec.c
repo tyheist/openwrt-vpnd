@@ -518,10 +518,7 @@ ipsec_policy_down(struct vpn *vpn)
 {
     LOG(L_DEBUG, "ipsec policy '%s' down", vpn->name);
     struct ipsec_policy_status *status = (struct ipsec_policy_status *)vpn->status;
-    /*char cmd[64] = {0};*/
     if (status->up) {
-        /*sprintf(cmd, "ipsec auto --down %s &", vpn->name);*/
-        /*run_cmd(cmd);*/
         add_command(500, 4, "ipsec", "auto", "--down", vpn->name);
         status->up = false;
         vlist_flush_all(&status->status);
@@ -536,23 +533,15 @@ ipsec_policy_up(struct vpn *vpn)
     struct ipsec_policy_status *status = (struct ipsec_policy_status *)vpn->status;
     struct ipsec_policy_seting *seting = (struct ipsec_policy_seting *)vpn->seting;
 
-    /*
-     *if (status->up) {
-     *    ipsec_policy_down(vpn);
-     *}
-     */
+    if (status->up) {
+        ipsec_policy_down(vpn);
+    }
 
     if (!blobmsg_get_bool(seting->_enable)) {
         LOG(L_DEBUG, "ipsec policy '%s' disable!!", vpn->name);
         return 0;
     }
 
-    if (status->up)
-        return 0;
-
-    /*char cmd[64] = {0};*/
-    /*sprintf(cmd, "ipsec auto --up %s &", vpn->name);*/
-    /*run_cmd(cmd);*/
     add_command(1000, 4, "ipsec", "auto", "--up", vpn->name);
     status->up = true;
     return 0;
@@ -562,13 +551,6 @@ static int
 ipsec_policy_enable(struct vpn *vpn)
 {
     LOG(L_DEBUG, "ipsec policy '%s' enable", vpn->name);
-    /*
-     *char cmd[64] = {0};
-     *run_cmd("ipsec auto --rereadsecrets");
-     *sprintf(cmd, "ipsec auto --replace %s", vpn->name);
-     *run_cmd(cmd);
-     */
-
     add_command(500, 3, "ipsec", "auto", "--rereadsecrets");
     add_command(500, 4, "ipsec", "auto", "--replace", vpn->name);
     return 0;
@@ -578,11 +560,7 @@ static int
 ipsec_policy_disable(struct vpn *vpn)
 {
     LOG(L_DEBUG, "ipsec policy '%s' disable", vpn->name);
-    /*char cmd[64] = {0};*/
     char *path = alloca(strlen(ipsec_path) + strlen(vpn->name) + 16);
-
-    /*sprintf(cmd, "ipsec auto --delete %s &", vpn->name);*/
-    /*run_cmd(cmd);*/
 
     add_command(500, 4, "ipsec", "auto", "--delete", vpn->name);
 
@@ -819,7 +797,7 @@ ipsec_setup_config(struct vpn *vpn)
 {
     LOG(L_DEBUG, "ipsec setup object config");
     struct ipsec_setup_seting *seting = (struct ipsec_setup_seting*)vpn->seting;
-    struct ipsec_setup_status *status = (struct ipsec_setup_status*)vpn->status;
+    /*struct ipsec_setup_status *status = (struct ipsec_setup_status*)vpn->status;*/
     char *path = alloca(strlen(ipsec_path) + strlen(vpn->name) + 16);
     FILE *f;
 
@@ -845,7 +823,6 @@ ipsec_setup_config(struct vpn *vpn)
 #undef WRITE_F
 
     vpn->config_pending = false;
-    status->running = false;
     fclose(f);
 
     return 0;
@@ -854,10 +831,8 @@ ipsec_setup_config(struct vpn *vpn)
 static int
 ipsec_setup_down(struct vpn *vpn)
 {
-    LOG(L_DEBUG, "ipsec setup object down");
     struct ipsec_setup_status *status = (struct ipsec_setup_status*)vpn->status;
     if (status->running) {
-        /*run_cmd("/etc/init.d/ipsec stop & >/dev/null 2>&1");*/
         add_command(1000, 2, "/etc/init.d/ipsec", "stop");
         status->running = false;
     }
@@ -867,18 +842,16 @@ ipsec_setup_down(struct vpn *vpn)
 static int
 ipsec_setup_up(struct vpn *vpn)
 {
-    LOG(L_DEBUG, "ipsec setup object up");
     struct ipsec_setup_seting *seting = (struct ipsec_setup_seting*)vpn->seting;
     struct ipsec_setup_status *status = (struct ipsec_setup_status*)vpn->status;
+
     if (blobmsg_get_bool(seting->_enable)) {
-        if (!status->running) {
-            /*run_cmd("/etc/init.d/ipsec restart & >/dev/null 2>&1");*/
-            add_command(4000, 2, "/etc/init.d/ipsec", "restart");
-            status->running = true;
-        }
+        add_command(4000, 2, "/etc/init.d/ipsec", "restart");
+        status->running = true;
     } else {
         ipsec_setup_down(vpn);
     }
+
     return 0;
 }
 
@@ -893,6 +866,15 @@ static int
 ipsec_setup_dump_info(struct vpn *vpn)
 {
     LOG(L_DEBUG, "ipsec setup object dump info");
+    struct ipsec_setup_seting *seting = (struct ipsec_setup_seting*)vpn->seting;
+
+    if (seting->_enable) {
+        blobmsg_add_u8(&b, "enable", (uint8_t)blobmsg_get_bool(seting->_enable));
+    }
+    if (seting->_plutodebug) {
+        blobmsg_add_string(&b, "plutodebug", (char*)blobmsg_data(seting->_plutodebug));
+    }
+
     return 0;
 }
 
@@ -1100,7 +1082,6 @@ ipsec_main_ubus_restart(struct ubus_context *ctx, struct ubus_object *obj,
         struct blob_attr *msg)
 {
     LOG(L_DEBUG, "ipsec restart!!!!");
-    /*run_cmd("/etc/init.d/ipsec restart");*/
     add_command(4000, 2, "/etc/init.d/ipsec", "restart");
     return 0;
 }
@@ -1120,7 +1101,6 @@ ipsec_main_ubus_start(struct ubus_context *ctx, struct ubus_object *obj,
         struct ubus_request_data *req, const char *mehtod,
         struct blob_attr *msg)
 {
-    /*run_cmd("/etc/init.d/ipsec start");*/
     add_command(4000, 2, "/etc/init.d/ipsec", "start");
     return 0;
 }
@@ -1130,7 +1110,6 @@ ipsec_main_ubus_stop(struct ubus_context *ctx, struct ubus_object *obj,
         struct ubus_request_data *req, const char *mehtod,
         struct blob_attr *msg)
 {
-    /*run_cmd("/etc/init.d/ipsec stop");*/
     add_command(2000, 2, "/etc/init.d/ipsec", "stop");
     return 0;
 }
@@ -1168,7 +1147,11 @@ ipsec_setup_ubus_dump(struct ubus_context *ctx, struct ubus_object *obj,
         struct ubus_request_data *req, const char *method,
         struct blob_attr *msg)
 {
-    LOG(L_DEBUG, "ipsec.setup dump!!!");
+    struct vpn *vpn = container_of(obj, struct vpn, obj);
+
+    blob_buf_init(&b, 0);
+    ipsec_setup_dump_info(vpn);
+    ubus_send_reply(ctx, req, b.head);
     return 0;
 }
 
