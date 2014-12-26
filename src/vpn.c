@@ -98,8 +98,8 @@ vpn_setup(const char *name, enum vpn_kind kind, const struct vpn_type *type,
     vlist_add(&h_vpns, &vpn->node, vpn->name);
     vpn = vlist_find(&h_vpns, vpn->name, vpn, node);
     if (!vpn) {
-        LOG(L_WARNING, "find vpn object (%s) error", vpn->name);
-        goto error;
+        LOG(L_WARNING, "find vpn object error");
+        return;
     }
     vpn->available = true;
 
@@ -111,7 +111,7 @@ vpn_setup(const char *name, enum vpn_kind kind, const struct vpn_type *type,
 
     return;
 error:
-    vpn_free(vpn);
+    if (vpn) { vpn_free(vpn); }
 }
 
 void
