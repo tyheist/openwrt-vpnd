@@ -1,0 +1,12 @@
+#!/bin/sh
+
+uci -q batch <<-EOT
+    delete firewall.ipsec
+    set firewall.ipsec=include
+    set firewall.ipsec.type=script
+    set firewall.ipsec.path=/etc/ipsec.d/firewall.include
+    set firewall.ipsec.family=IPv4
+    commit firewall
+EOT
+
+exit 0

@@ -91,6 +91,7 @@ struct ipsec_setup_seting {
 
 struct ipsec_setup_status {
     bool running;
+    struct uloop_timeout timeout;
 };
 
 enum {
@@ -459,7 +460,7 @@ ipsec_policy_config(struct vpn *vpn)
         fclose(f);
         vpn->type->ops->down(vpn);
         vpn->type->ops->disable(vpn);
-        return -1;
+        return 0;
     }
 
     fprintf(f, "conn %s\n", vpn->name);
@@ -520,6 +521,7 @@ ipsec_policy_down(struct vpn *vpn)
     struct ipsec_policy_status *status = (struct ipsec_policy_status *)vpn->status;
     if (status->up) {
         add_command(500, 4, "ipsec", "auto", "--down", vpn->name);
+        add_command(500, 5, "ipsec", "whack", "--unroute", "--name", vpn->name);
         status->up = false;
         vlist_flush_all(&status->status);
     }
@@ -573,10 +575,43 @@ ipsec_policy_disable(struct vpn *vpn)
     return 0;
 }
 
+static void
+ipsec_policy_firewall_reload(void)
+{
+    struct vpn *vpn;
+    struct ipsec_policy_seting *seting = NULL;
+    FILE *fp = fopen("/etc/ipsec.d/firewall.include", "w");
+    if (!fp) return;
+
+    vlist_for_each_element(&h_vpns, vpn, node) {
+        seting = (struct ipsec_policy_seting*)vpn->seting;
+        if (!strcmp(vpn->type->name, "ipsec_policy") 
+            && blobmsg_get_bool(seting->_enable)) {
+            fprintf(fp, "iptables -t nat -A postrouting_rule -s %s -d %s "
+                    "-m comment --comment \"ipsec-policy-(%s)-upstream\" -j ACCEPT\n",
+                    blobmsg_get_string(seting->_leftsubnet), 
+                    blobmsg_get_string(seting->_rightsubnet),
+                    vpn->name);
+
+            fprintf(fp, "iptables -t filter -A forwarding_rule -s %s -d %s "
+                    "-m comment --comment \"ipsec-policy-(%s)-downstream\" -j ACCEPT\n",
+                    blobmsg_get_string(seting->_rightsubnet),
+                    blobmsg_get_string(seting->_leftsubnet), 
+                    vpn->name);
+        }
+    }
+    if (fp) fclose(fp);
+
+    add_command(500, 3, "fw3", "-q", "restart");
+}
+
 static int
 ipsec_policy_finish(struct vpn *vpn)
 {
     LOG(L_DEBUG, "ipsec policy '%s' finish", vpn->name);
+
+    ipsec_policy_firewall_reload();
+
     return 0;
 }
 
@@ -698,6 +733,20 @@ ipsec_setup_config_set(struct ipsec_setup_seting *seting, struct blob_attr *conf
     return;
 }
 
+static void
+ipsec_setup_watch_pluto(struct uloop_timeout *t)
+{
+    if (!access("/var/run/pluto/pluto.pid", F_OK)) {
+        LOG(L_DEBUG, "pluto process is EXIST!!!!!\n");
+    } else {
+        /* struct ipsec_setup_status *status = container_of(t, struct uloop_timeout, timeout); */
+        LOG(L_DEBUG, "pluto process is NOT EXIST!!");
+        add_command(5000, 2, "/etc/init.d/ipsec", "restart");
+    }
+
+    uloop_timeout_set(t, 60 * 1000);
+}
+
 static struct vpn *
 ipsec_setup_create(struct vpn *vpn, struct blob_attr *config)
 {
@@ -720,6 +769,8 @@ ipsec_setup_create(struct vpn *vpn, struct blob_attr *config)
 
     vpn->seting = seting;
     vpn->status = status;
+
+    status->timeout.cb = ipsec_setup_watch_pluto;
 
     return vpn;
 error:
@@ -814,6 +865,9 @@ ipsec_setup_config(struct vpn *vpn)
     }
 
     fprintf(f, "config setup\n");
+    fprintf(f, "\tprotostack=netkey\n");
+    fprintf(f, "\tnat_traversal=yes\n");
+
 #define WRITE_F(field) \
     if (seting->_##field) { \
         fprintf(f, "\t%s=\"%s\"\n", #field, blobmsg_get_string(seting->_##field)); \
@@ -833,6 +887,7 @@ ipsec_setup_down(struct vpn *vpn)
 {
     struct ipsec_setup_status *status = (struct ipsec_setup_status*)vpn->status;
     if (status->running) {
+        uloop_timeout_cancel(&status->timeout);
         add_command(1000, 2, "/etc/init.d/ipsec", "stop");
         status->running = false;
     }
@@ -846,8 +901,9 @@ ipsec_setup_up(struct vpn *vpn)
     struct ipsec_setup_status *status = (struct ipsec_setup_status*)vpn->status;
 
     if (blobmsg_get_bool(seting->_enable)) {
-        add_command(4000, 2, "/etc/init.d/ipsec", "restart");
+        add_command(10*1000, 2, "/etc/init.d/ipsec", "restart");
         status->running = true;
+        uloop_timeout_set(&status->timeout, 60 * 1000);
     } else {
         ipsec_setup_down(vpn);
     }
@@ -1029,6 +1085,12 @@ ipsec_policy_ubus_set_status(struct ubus_context *ctx, struct ubus_object *obj,
     s = (struct ipsec_policy_status *)vpn->status;
     vlist_add(&s->status, &status->node, status->right);
 
+    if (!strcmp(status->status, "up")) {
+        s->up = true;
+    } else if (!strcmp(status->status, "down")) {
+        s->up = false;
+    }
+
     return 0;
 }
 
@@ -1188,9 +1250,14 @@ ipsec_event_handler(char *action, char *net)
         vlist_for_each_element(&h_vpns, vpn, node) {
             seting = (struct ipsec_policy_seting*)vpn->seting;
             if (!strcmp(vpn->type->name, "ipsec_policy") 
-                    && !strcmp(net, blobmsg_data(seting->_left))) {
+                && !strcmp(net, blobmsg_data(seting->_left))) {
+
                 ipsec_policy_left_get(vpn, net);
                 vpn->type->ops->config(vpn);
+                
+                /** reload ipsec listen interface **/
+                add_command(500, 3, "ipsec", "whack", "--listen");
+
                 vpn->type->ops->up(vpn);
             }
         }
